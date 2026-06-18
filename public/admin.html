@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LevaCarga - Central de Segurança</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="bg-slate-900 text-white font-sans min-h-screen p-6">
+    
+    <div id="loginSection" class="max-w-md mx-auto mt-20 bg-slate-950 p-6 rounded-3xl border-2 border-slate-800 shadow-2xl space-y-5">
+        <div class="text-center">
+            <h1 class="text-xl font-black tracking-wider">LEVA<span class="text-yellow-400">CARGA</span></h1>
+            <p class="text-xs text-slate-400 uppercase font-bold tracking-widest mt-1">Acesso Restrito à Direção</p>
+        </div>
+        <form id="adminLoginForm" class="space-y-4">
+            <input type="email" id="admEmail" placeholder="E-mail de Administrador" required class="w-full bg-slate-900 border-2 border-slate-700 rounded-xl p-4 font-bold text-white focus:border-yellow-400 outline-none">
+            <input type="password" id="admPassword" placeholder="Palavra-passe Secreta" required class="w-full bg-slate-900 border-2 border-slate-700 rounded-xl p-4 font-bold text-white focus:border-yellow-400 outline-none">
+            <button type="submit" class="w-full bg-yellow-500 hover:bg-yellow-600 text-slate-950 font-black py-4 rounded-xl uppercase tracking-wider text-sm transition text-center">ENTRAR NO PAINEL</button>
+        </form>
+    </div>
+
+    <div id="dashboardSection" class="hidden space-y-6">
+        <header class="max-w-5xl mx-auto bg-slate-950 p-6 rounded-3xl border-2 border-slate-800 flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-black tracking-wider">LEVA<span class="text-yellow-400">CARGA</span> ADMIN</h1>
+                <p class="text-xs text-slate-400 uppercase font-bold tracking-widest">Painel de Controlo & Relatórios Financeiros</p>
+            </div>
+            <button onclick="logoutAdmin()" class="bg-red-950 text-red-400 border border-red-900 font-mono text-xs px-4 py-2 rounded-xl font-bold uppercase tracking-wider hover:bg-red-900 hover:text-white transition">Sair</button>
+        </header>
+
+        <main class="max-w-5xl mx-auto space-y-6">
+            <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-slate-950 p-5 rounded-2xl border-2 border-slate-800">
+                    <p class="text-[10px] uppercase font-black text-slate-400 tracking-wider">Faturamento Total (Bruto)</p>
+                    <p id="totalBruto" class="text-2xl font-black text-yellow-400 font-mono mt-1">0 Kz</p>
+                </div>
+                <div class="bg-slate-950 p-5 rounded-2xl border-2 border-slate-800">
+                    <p class="text-[10px] uppercase font-black text-slate-400 tracking-wider">Comissão da Empresa (20% Arrecadado)</p>
+                    <p id="totalEmpresa" class="text-2xl font-black text-emerald-400 font-mono mt-1">0 Kz</p>
+                </div>
+                <div class="bg-slate-950 p-5 rounded-2xl border-2 border-slate-800">
+                    <p class="text-[10px] uppercase font-black text-slate-400 tracking-wider">Corridas Concluídas</p>
+                    <p id="totalCorridas" class="text-2xl font-black text-blue-400 font-mono mt-1">0</p>
+                </div>
+            </section>
+
+            <div class="bg-slate-950 p-6 rounded-3xl border-2 border-slate-800 shadow-2xl">
+                <h2 class="text-base font-black uppercase tracking-wide text-emerald-400 border-b border-slate-800 pb-3 mb-4">💰 Central de Recarga de Saldo (Pré-Pago)</h2>
+                <form id="rechargeForm" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label class="block text-xs uppercase text-slate-400 font-bold mb-2">Telefone do Motorista</label>
+                        <input type="tel" id="recPhone" placeholder="Ex: 923000000" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-mono font-bold text-white outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase text-slate-400 font-bold mb-2">Valor Desejado (Kwanza)</label>
+                        <input type="number" id="recAmount" placeholder="Ex: 5000" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-mono font-bold text-white outline-none">
+                    </div>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black p-3.5 rounded-xl uppercase text-xs tracking-wider transition">Validar Depósito 💸</button>
+                </form>
+            </div>
+
+            <div class="bg-slate-950 p-6 rounded-3xl border-2 border-slate-800 shadow-2xl">
+                <h2 class="text-base font-black uppercase tracking-wide text-yellow-400 border-b border-slate-800 pb-3 mb-4">🚨 Operadores Aguardando Validação Física</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase font-black">
+                                <th class="py-3 px-4">Motorista</th>
+                                <th class="py-3 px-4">Contacto / BI</th>
+                                <th class="py-3 px-4">Viatura / Matrícula</th>
+                                <th class="py-3 px-4 text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaPendentes" class="text-sm font-medium divide-y divide-slate-800"></tbody>
+                    </table>
+                    <div id="noDrivers" class="text-center py-6 text-slate-500 font-bold text-sm">Nenhum motorista pendente de aprovação.</div>
+                </div>
+            </div>
+
+            <div class="bg-slate-950 p-6 rounded-3xl border-2 border-slate-800 shadow-2xl">
+                <h2 class="text-base font-black uppercase tracking-wide text-blue-400 border-b border-slate-800 pb-3 mb-4">📜 Histórico Recente de Fretes</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase font-black">
+                                <th class="py-3 px-4">Cliente</th>
+                                <th class="py-3 px-4">Mercadoria</th>
+                                <th class="py-3 px-4 text-right">Faturamento</th>
+                                <th class="py-3 px-4 text-right">Lucro App (20%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaHistorico" class="text-sm font-mono divide-y divide-slate-800 text-slate-300"></tbody>
+                    </table>
+                    <div id="noHistory" class="text-center py-6 text-slate-500 font-bold text-sm">Nenhuma corrida registada no sistema hoje.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const socket = io();
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (sessionStorage.getItem('isLevaCargaAdmin') === 'true') { mostrarDashboard(); }
+        });
+
+        document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('admEmail').value;
+            const password = document.getElementById('admPassword').value;
+
+            const res = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            if (data.success) {
+                sessionStorage.setItem('isLevaCargaAdmin', 'true');
+                mostrarDashboard();
+            } else { alert(data.message); }
+        });
+
+        function mostrarDashboard() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            carregarPendentes(); carregarHistoricoGlobal();
+        }
+
+        function logoutAdmin() {
+            sessionStorage.removeItem('isLevaCargaAdmin'); window.location.reload();
+        }
+
+        // Script para processar o formulário de recarga
+        document.getElementById('rechargeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const phone = document.getElementById('recPhone').value;
+            const amount = document.getElementById('recAmount').value;
+
+            const res = await fetch('/api/admin/recharge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, amount })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if(data.success) {
+                document.getElementById('rechargeForm').reset();
+            }
+        });
+
+        async function carregarPendentes() {
+            const res = await fetch('/api/admin/pending');
+            const data = await res.json(); renderizarTabela(data);
+        }
+
+        async function carregarHistoricoGlobal() {
+            const res = await fetch('/api/freights/history'); 
+            const data = await res.json(); renderizarHistorico(data);
+        }
+
+        function renderizarTabela(lista) {
+            const tbody = document.getElementById('listaPendentes');
+            const noDrivers = document.getElementById('noDrivers');
+            tbody.innerHTML = '';
+            if(lista.length === 0) { noDrivers.classList.remove('hidden'); return; }
+            noDrivers.classList.add('hidden');
+
+            lista.forEach(d => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-900/50 transition">
+                        <td class="py-4 px-4 font-black text-white">${d.name}</td>
+                        <td class="py-4 px-4 font-mono text-xs text-slate-300">Telf: ${d.phone}<br>BI: ${d.bi}</td>
+                        <td class="py-4 px-4"><span class="bg-blue-950 text-blue-400 text-xs px-2.5 py-1 rounded-md font-bold border border-blue-900 block w-max">${d.vehicleType}</span><span class="text-xs text-slate-400 font-mono mt-1 block">Placa: ${d.licensePlate}</span></td>
+                        <td class="py-4 px-4 text-center">
+                            <button onclick="aprovarMotorista('${d.tempId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl uppercase tracking-wider transition">APROVAR ✅</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderizarHistorico(lista) {
+            const tbody = document.getElementById('listaHistorico');
+            const noHistory = document.getElementById('noHistory');
+            tbody.innerHTML = '';
+            if(!lista || lista.length === 0) { noHistory.classList.remove('hidden'); return; }
+            noHistory.classList.add('hidden');
+
+            let brutoTotal = 0; let empresaTotal = 0;
+
+            lista.forEach(h => {
+                const valorBruto = parseInt(h.faturacao.replace(/[^0-9]/g, '')) || 0;
+                const lucroEmpresa = Math.round(valorBruto * 0.20);
+                brutoTotal += valorBruto; empresaTotal += lucroEmpresa;
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-900/30">
+                        <td class="py-3 px-4 text-white font-sans font-bold">${h.clientName || 'Cliente Geral'}</td>
+                        <td class="py-3 px-4 font-sans text-xs">${h.cargoDetails}</td>
+                        <td class="py-3 px-4 text-right text-yellow-400 font-bold">${valorBruto.toLocaleString('pt-AO')} Kz</td>
+                        <td class="py-3 px-4 text-right text-emerald-400 font-bold">${lucroEmpresa.toLocaleString('pt-AO')} Kz</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('totalBruto').innerText = brutoTotal.toLocaleString('pt-AO') + " Kz";
+            document.getElementById('totalEmpresa').innerText = empresaTotal.toLocaleString('pt-AO') + " Kz";
+            document.getElementById('totalCorridas').innerText = lista.length;
+        }
+
+        async function aprovarMotorista(tempId) {
+            if(!confirm("Confirma que validou a Ficha de Segurança deste operador?")) return;
+            const res = await fetch('/api/admin/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tempId })
+            });
+            const r = await res.json(); alert(r.message);
+        }
+
+        socket.on('admin_reload_pending', (lista) => { renderizarTabela(lista); });
+        socket.on('status_changed', (data) => {
+            if(data.novoStatus === 'concluido') { setTimeout(carregarHistoricoGlobal, 800); }
+        });
+    </script>
+</body>
+</html>

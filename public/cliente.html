@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LevaCarga - Solicitar Frete</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        input, select { border: 3px solid #64748b !important; padding: 14px !important; font-size: 16px !important; font-weight: 800 !important; color: #0f172a !important; }
+        button { font-size: 16px !important; padding: 18px !important; font-weight: 900 !important; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-950 min-h-screen font-sans p-4 sm:p-6">
+    <div class="max-w-md mx-auto bg-white border-4 border-slate-950 p-6 rounded-3xl space-y-5 shadow-2xl">
+        <div class="flex items-center justify-between border-b-2 border-slate-200 pb-3">
+            <a href="/index.html" class="bg-slate-200 hover:bg-slate-300 text-slate-950 font-black text-xs px-3 py-2 rounded-lg border border-slate-400 uppercase tracking-wider transition">⬅️ Voltar</a>
+            <h2 class="text-base font-black text-slate-900 uppercase tracking-wider">Novo Frete</h2>
+        </div>
+
+        <form id="freightForm" class="space-y-4">
+            <input type="text" id="clientName" placeholder="O seu Nome / Empresa" required class="w-full rounded-xl bg-slate-50">
+            <input type="text" id="cargoDetails" placeholder="O que vai transportar? (Ex: 10 Sacos)" required class="w-full rounded-xl bg-slate-50">
+            
+            <select id="vehicleType" required class="w-full rounded-xl bg-slate-50">
+                <option value="">Tipo de Viatura Exigida</option>
+                <option value="Moto de Duas Rodas">Moto de Duas Rodas (Até 20kg)</option>
+                <option value="Trisiclo de Carga">Trisiclo de Carga (Até 500kg)</option>
+                <option value="Carro Normal">Carro Normal (Ligeiro)</option>
+                <option value="Carrinha de Carga">Carrinha de Carga (Dyna/Hilux)</option>
+                <option value="Camião Canter">Camião Canter (Até 4 Toneladas)</option>
+                <option value="Camião Grande">Camião Grande (Contentor)</option>
+            </select>
+
+            <div class="bg-slate-100 p-4 rounded-xl border-2 border-slate-300 text-xs font-bold text-slate-700 space-y-1">
+                <p class="text-slate-900 uppercase font-black">💳 Política de Pagamento Oficial:</p>
+                <p>O pagamento do valor tabelado deve ser efetuado na totalidade **diretamente ao motorista** no ato da recolha ou entrega da mercadoria.</p>
+                <p>Aceita-se **Dinheiro Físico** ou transferência instantânea **Multicaixa Express**.</p>
+            </div>
+
+            <button type="submit" id="btnChamar" class="w-full bg-blue-600 text-white rounded-xl uppercase tracking-wider">CHAMAR MOTORISTA AGORA</button>
+        </form>
+
+        <div id="statusBox" class="hidden p-5 bg-slate-950 text-white rounded-2xl border-2 border-slate-800 text-center space-y-2">
+            <div class="animate-ping inline-block w-3 h-3 bg-yellow-400 rounded-full mb-1"></div>
+            <p id="statusText" class="text-sm font-black uppercase tracking-wide text-yellow-400">Procurando operadores próximos...</p>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const clientId = 'cli_' + Math.random().toString(36).substring(2, 9);
+
+        document.getElementById('freightForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const clientName = document.getElementById('clientName').value;
+            const cargoDetails = document.getElementById('cargoDetails').value;
+            const vehicleType = document.getElementById('vehicleType').value;
+
+            document.getElementById('freightForm').classList.add('hidden');
+            document.getElementById('statusBox').classList.remove('hidden');
+
+            socket.emit('new_freight_request', { clientId, clientName, cargoDetails, vehicleType });
+        });
+
+        socket.on('status_changed', (data) => {
+            if (data.clientId === clientId) {
+                const txt = document.getElementById('statusText');
+                if(data.novoStatus === 'a_caminho') txt.innerText = "🚚 MOTORISTA ACEITOU! A CAMINHO DA RECOLHA...";
+                if(data.novoStatus === 'no_local') txt.innerText = "📍 VIATURA NO LOCAL DA RECOLHA!";
+                if(data.novoStatus === 'em_transito') txt.innerText = "📦 CARGA EM TRÂNSITO RODOVIÁRIO...";
+                if(data.novoStatus === 'concluido') {
+                    alert("O seu frete foi concluído e entregue com sucesso!");
+                    window.location.reload();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

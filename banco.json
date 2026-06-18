@@ -1,0 +1,61 @@
+{
+  "clients": [
+    {
+      "id": "1781540845212",
+      "name": "Josué Sebastião ",
+      "phone": "929561445",
+      "password": "$2b$10$AKCTiCI5Ru9uYiErlF1yEOuei62nUrd4Kwsbn94rN/aS3pBq3jXXq"
+    }
+  ],
+  "drivers": [
+    {
+      "id": "1781742918348",
+      "name": "Romeu Bande ",
+      "bi": "008127472LA048",
+      "phone": "929561442",
+      "email": "lucasbandej@gmail.com",
+      "vehicleType": "Carrinha Hilux / D-Max",
+      "licensePlate": "LD 55 89 ",
+      "password": "$2b$10$kuzdSBpxN4l/CPcCoqk49Oioqy5n20nJtDXidQn28LNA5VQm8zr7i",
+      "multiplicador": 1.8,
+      "totalGanhos": 0
+    },
+    {
+      "id": "1781743146128",
+      "name": "Romeu Bande ",
+      "bi": "008127472LA048",
+      "phone": "921505236",
+      "email": "lucasbandej@gmail.com",
+      "vehicleType": "Motorizada de Carga",
+      "licensePlate": "LD 55 89 ",
+      "password": "$2b$10$yzb24QW.1fdBKjxxtRGMae/QP4o4cLlgtzJRs0pAqYdmg1hpRQIhO",
+      "multiplicador": 0.7,
+      "totalGanhos": 0
+    },
+    {
+      "id": "1781747451445",
+      "name": "Marcos Bande ",
+      "bi": "0068899544",
+      "phone": "925236985",
+      "email": "lucasbandej@gmail.com",
+      "vehicleType": "Camião Canter 4 Ton",
+      "licensePlate": "LD 60-61",
+      "password": "$2b$10$cECYCgeGuBSP/PrKcy9f1.Rc/GqHK188jqNfTC1jn6XQCeE0WlTUu",
+      "multiplicador": 2.5,
+      "totalGanhos": 0
+    },
+    {
+      "id": "1781747620285",
+      "name": "Bande",
+      "bi": "0078933",
+      "phone": "942895614",
+      "email": "lucasbandej@gmail.com",
+      "vehicleType": "Camião Canter 4 Ton",
+      "licensePlate": "LD 60-61",
+      "password": "$2b$10$ywM57xCRl16YaZqjr3tY/uILRSeauU9GR2We7bO6XTe8eB8gQ3I9e",
+      "multiplicador": 2.5,
+      "totalGanhos": 0
+    }
+  ],
+  "freights": []
+}

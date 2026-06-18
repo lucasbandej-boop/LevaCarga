@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LevaCarga - Painel do Operador</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 350px; width: 100%; border: 4px solid #0f172a; border-radius: 24px; }
+        input, select { border: 3px solid #64748b !important; padding: 14px !important; font-size: 16px !important; font-weight: 800 !important; color: #0f172a !important; }
+        button { font-size: 16px !important; padding: 18px !important; font-weight: 900 !important; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-950 min-h-screen font-sans antialiased p-3 sm:p-6">
+    <div id="authPanel" class="max-w-md mx-auto pt-10">
+        <div class="bg-white border-4 border-slate-950 p-6 rounded-3xl space-y-5 shadow-2xl">
+            <div class="flex items-center justify-between border-b-2 border-slate-200 pb-3">
+                <a href="/index.html" class="bg-slate-200 hover:bg-slate-300 text-slate-950 font-black text-xs px-3 py-2 rounded-lg border border-slate-400 uppercase tracking-wider transition">⬅️ Início</a>
+                <h2 class="text-base font-black text-slate-900 uppercase tracking-wider">Acesso Operador</h2>
+            </div>
+            <div class="grid grid-cols-2 bg-slate-200 p-1.5 rounded-xl border-2 border-slate-400">
+                <button id="btnTabLogin" type="button" onclick="alternarAbas('login')" class="bg-slate-950 text-white rounded-lg py-2">ENTRAR</button>
+                <button id="btnTabRegister" type="button" onclick="alternarAbas('registo')" class="text-slate-700 py-2">REGISTAR</button>
+            </div>
+            <form id="loginForm" class="space-y-4">
+                <input type="tel" id="drvPhone" placeholder="Nº de Telefone" required class="w-full rounded-xl bg-slate-50">
+                <input type="password" id="drvPassword" placeholder="Palavra-passe" required class="w-full rounded-xl bg-slate-50">
+                <button type="submit" class="w-full bg-slate-950 text-white rounded-xl uppercase">ENTRAR NA CARTEIRA</button>
+            </form>
+            <form id="registerForm" class="space-y-3 hidden">
+                <input type="text" id="regName" placeholder="Nome Completo" required class="w-full rounded-xl bg-slate-50">
+                <input type="text" id="regBi" placeholder="Nº do BI" required class="w-full rounded-xl bg-slate-50">
+                <input type="tel" id="regPhone" placeholder="Telefone" required class="w-full rounded-xl bg-slate-50">
+                <input type="email" id="regEmail" placeholder="E-mail (Opcional)" class="w-full rounded-xl bg-slate-50">
+                <select id="regVehicle" required class="w-full rounded-xl bg-slate-50">
+                    <option value="">Escolha a Viatura</option>
+                    <option value="Moto de Duas Rodas">Moto de Duas Rodas (Estafeta)</option>
+                    <option value="Trisiclo de Carga">Trisiclo de Carga</option>
+                    <option value="Carro Normal">Carro Normal (Ligeiro / Candongueiro)</option>
+                    <option value="Carrinha de Carga">Carrinha de Carga (Hilux / Dyna)</option>
+                    <option value="Camião Canter">Camião Canter (Até 4 Ton)</option>
+                    <option value="Camião Grande">Camião Grande (Contentor)</option>
+                </select>
+                <input type="text" id="regPlate" placeholder="Matrícula do Carro" required class="w-full rounded-xl bg-slate-50">
+                <input type="password" id="regPassword" placeholder="Criar Palavra-passe" required class="w-full rounded-xl bg-slate-50">
+                <button type="submit" class="w-full bg-blue-700 text-white rounded-xl uppercase">CONCLUIR CADASTRO</button>
+            </form>
+            <div id="verifyForm" class="space-y-3 hidden text-center py-6">
+                <div class="animate-spin text-4xl mb-2">🔄</div>
+                <p class="text-sm font-black text-slate-900 uppercase">Aguardando Validação de Segurança...</p>
+                <p class="text-xs text-slate-500 font-medium">Apresente o seu Registro Criminal e assine a Ficha Técnica para ativar a carteira profissional.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="mainDashboard" class="hidden space-y-6">
+        <header class="bg-slate-950 text-white p-6 rounded-3xl shadow-xl flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
+                <button onclick="fazerLogout()" class="bg-red-700 hover:bg-red-800 text-white font-black text-xs px-4 py-3 rounded-xl border-2 border-red-900 uppercase tracking-wider transition">❌ Sair</button>
+                <h1 id="driverProfile" class="text-sm font-black tracking-wider uppercase text-slate-200">🚚 MOTORISTA</h1>
+            </div>
+            <div class="bg-white border-2 border-slate-800 p-3 rounded-2xl text-center min-w-[200px]">
+                <p class="text-[9px] uppercase font-black text-slate-500 tracking-wider">Saldo da App (Pré-Pago)</p>
+                <p id="walletBalance" class="text-xl font-black text-emerald-700 font-mono">0 Kz</p>
+            </div>
+        </header>
+
+        <main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-1 space-y-4">
+                <section id="noOrderBox" class="bg-white border-4 border-slate-950 p-8 rounded-3xl text-center text-slate-600 font-black text-sm shadow-xl">🔄 RASTREANDO VIAGENS ATIVAS EM LUANDA...</section>
+                
+                <section id="offerCard" class="hidden bg-yellow-400 border-4 border-slate-950 p-6 rounded-3xl space-y-4 shadow-2xl">
+                    <h3 class="text-base font-black uppercase text-slate-950 tracking-wider">📦 ALERTA DE NOVO FRETE!</h3>
+                    <div class="bg-white p-4 rounded-xl space-y-2 text-sm border-2 border-slate-950 font-black">
+                        <p>Cliente: <span id="offClient" class="text-blue-700">---</span></p>
+                        <p>Carga: <span id="offDetails">---</span></p>
+                        <p class="text-base text-red-600">Cobrar ao Cliente: <span id="offPrice" class="font-black">--- Kz</span></p>
+                        <div class="bg-slate-100 p-2 text-[11px] text-slate-600 rounded border border-slate-300 mt-2 font-sans font-bold">
+                            ⚠️ Receba o valor total acima em dinheiro ou Express diretamente do cliente. A taxa da app (20%) será deduzida do seu saldo.
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="recusarFrete()" class="bg-white border-2 border-slate-950 text-slate-950 rounded-xl">IGNORAR</button>
+                        <button onclick="aceitarFrete()" class="bg-slate-950 text-white rounded-xl">ACEITAR</button>
+                    </div>
+                </section>
+
+                <section id="activeJobCard" class="hidden bg-white border-4 border-slate-950 p-5 rounded-3xl shadow-xl space-y-4">
+                    <h3 class="text-sm font-black uppercase text-slate-500 border-b-2 border-slate-200 pb-2">CONTROLO DE ROTA</h3>
+                    <p id="jobStatusText" class="text-sm text-blue-700 bg-blue-50 p-4 rounded-xl border-2 border-blue-600 font-black">Status: A mover-se para a carga...</p>
+                    <button id="btnNextStatus" onclick="avancarEstadoCorrida()" class="w-full bg-blue-700 text-white rounded-xl uppercase">CONFIRMAR CHEGADA</button>
+                </section>
+            </div>
+            <div class="lg:col-span-2 space-y-4">
+                <div class="bg-white border-4 border-slate-950 p-2 rounded-3xl shadow-2xl"><div id="map"></div></div>
+                <div class="bg-white border-4 border-slate-950 p-5 rounded-3xl shadow-2xl">
+                    <h3 class="text-sm font-black uppercase text-slate-900 mb-3 border-b-2 border-slate-200 pb-2">Histórico de Corridas do Dia</h3>
+                    <div class="overflow-x-auto"><table class="w-full text-left font-mono text-xs"><tbody id="driverHistory"></tbody></table></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const socket = io();
+        let myLocation = { lat: -8.8368, lng: 13.2344 };
+        let map, driverMarker;
+        let driverId = localStorage.getItem('uberDrv_id');
+        let driverName = localStorage.getItem('uberDrv_name');
+        let currentOrder = null; let gpsInterval = null;
+
+        window.addEventListener('DOMContentLoaded', () => { if(driverId) loadDashboard(); });
+        
+        function alternarAbas(tipo) {
+            const loginF = document.getElementById('loginForm'); const regF = document.getElementById('registerForm');
+            const btnL = document.getElementById('btnTabLogin'); const btnR = document.getElementById('btnTabRegister');
+            if(tipo === 'login') {
+                loginF.classList.remove('hidden'); regF.classList.add('hidden');
+                btnL.className = "bg-slate-950 text-white rounded-lg py-2"; btnR.className = "text-slate-700 py-2";
+            } else {
+                loginF.classList.add('hidden'); regF.classList.remove('hidden');
+                btnR.className = "bg-slate-950 text-white rounded-lg py-2"; btnL.className = "text-slate-700 py-2";
+            }
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const res = await fetch('/api/drivers/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: document.getElementById('regName').value, bi: document.getElementById('regBi').value,
+                    phone: document.getElementById('regPhone').value, email: document.getElementById('regEmail').value,
+                    vehicleType: document.getElementById('regVehicle').value, licensePlate: document.getElementById('regPlate').value,
+                    password: document.getElementById('regPassword').value
+                })
+            });
+            const d = await res.json();
+            if(d.success) {
+                document.getElementById('registerForm').classList.add('hidden');
+                document.getElementById('verifyForm').classList.remove('hidden');
+                socket.on(`driver_approved_${d.tempId}`, (resposta) => {
+                    localStorage.setItem('uberDrv_id', resposta.driverId);
+                    localStorage.setItem('uberDrv_name', resposta.name);
+                    window.location.reload();
+                });
+            } else { alert(d.message); }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const res = await fetch('/api/drivers/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: document.getElementById('drvPhone').value, password: document.getElementById('drvPassword').value })
+            });
+            const d = await res.json();
+            if(d.success) {
+                localStorage.setItem('uberDrv_id', d.driverId); localStorage.setItem('uberDrv_name', d.name);
+                driverId = d.driverId; driverName = d.name; loadDashboard();
+            } else { alert(d.message); }
+        });
+
+        async function loadDashboard() {
+            document.getElementById('authPanel').classList.add('hidden');
+            document.getElementById('mainDashboard').classList.remove('hidden');
+            document.getElementById('driverProfile').innerText = `OPERADOR: ${driverName.toUpperCase()}`;
+            
+            // Puxar saldo inicial da API
+            const profileRes = await fetch(`/api/drivers/profile?driverId=${driverId}`);
+            const profileData = await profileRes.json();
+            if(profileData.success) {
+                document.getElementById('walletBalance').innerText = profileData.balance.toLocaleString('pt-AO') + " Kz";
+            }
+
+            // Ouvir atualizações de saldo em tempo real (quando fechar corrida ou quando administrador carregar)
+            socket.on(`balance_updated_${driverId}`, (data) => {
+                document.getElementById('walletBalance').innerText = data.newBalance.toLocaleString('pt-AO') + " Kz";
+            });
+
+            initMap(); loadDriverHistory();
+        }
+
+        function initMap() {
+            map = L.map('map').setView([myLocation.lat, myLocation.lng], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            driverMarker = L.marker([myLocation.lat, myLocation.lng]).addTo(map);
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(p => {
+                    myLocation.lat = p.coords.latitude; myLocation.lng = p.coords.longitude;
+                    map.setView([myLocation.lat, myLocation.lng], 13);
+                    driverMarker.setLatLng([myLocation.lat, myLocation.lng]);
+                });
+            }
+            gpsInterval = setInterval(() => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(p => {
+                        myLocation.lat = p.coords.latitude; myLocation.lng = p.coords.longitude;
+                        driverMarker.setLatLng([myLocation.lat, myLocation.lng]);
+                        socket.emit('update_location', { driverId, lat: myLocation.lat, lng: myLocation.lng });
+                    });
+                }
+            }, 5000);
+        }
+
+        socket.on('freight_offer', (data) => {
+            if(currentOrder) return; currentOrder = data;
+            document.getElementById('noOrderBox').classList.add('hidden');
+            document.getElementById('offerCard').classList.remove('hidden');
+            document.getElementById('offClient').innerText = data.clientName;
+            document.getElementById('offDetails').innerText = data.cargoDetails;
+            document.getElementById('offPrice').innerText = data.faturacao;
+        });
+
+        function recusarFrete() {
+            currentOrder = null;
+            document.getElementById('offerCard').classList.add('hidden');
+            document.getElementById('noOrderBox').classList.remove('hidden');
+        }
+
+        function aceitarFrete() {
+            document.getElementById('offerCard').classList.add('hidden');
+            document.getElementById('activeJobCard').classList.remove('hidden');
+            currentOrder.statusAtual = 'a_caminho';
+            socket.emit('update_status_corrida', { clientId: currentOrder.clientId, novoStatus: 'a_caminho' });
+        }
+
+        function avancarEstadoCorrida() {
+            const btn = document.getElementById('btnNextStatus'); const txt = document.getElementById('jobStatusText');
+            if(currentOrder.statusAtual === 'a_caminho') {
+                currentOrder.statusAtual = 'no_local'; txt.innerText = "Status: Aguardando Carregamento da Carga...";
+                btn.innerText = "INICIAR VIAGEM (EM ROTA)";
+                socket.emit('update_status_corrida', { clientId: currentOrder.clientId, novoStatus: 'no_local' });
+            } else if(currentOrder.statusAtual === 'no_local') {
+                currentOrder.statusAtual = 'em_transito'; txt.innerText = "Status: Carga em trânsito...";
+                btn.innerText = "ENTREGA FEITA (CONCLUIR FRETE)";
+                socket.emit('update_status_corrida', { clientId: currentOrder.clientId, novoStatus: 'em_transito' });
+            } else if(currentOrder.statusAtual === 'em_transito') {
+                socket.emit('update_status_corrida', {
+                    clientId: currentOrder.clientId, clientName: currentOrder.clientName,
+                    cargoDetails: currentOrder.cargoDetails, faturacao: currentOrder.faturacao, 
+                    novoStatus: 'concluido', driverId: driverId
+                });
+                alert("Frete concluído com sucesso e taxa da app debitada!"); currentOrder = null;
+                document.getElementById('activeJobCard').classList.add('hidden');
+                document.getElementById('noOrderBox').classList.remove('hidden'); loadDriverHistory();
+            }
+        }
+
+        async function loadDriverHistory() {
+            const res = await fetch(`/api/freights/history?driverId=${driverId}`); const data = await res.json();
+            const b = document.getElementById('driverHistory'); b.innerHTML = '';
+            data.forEach(h => {
+                b.innerHTML += `<tr class="border-b border-slate-300 text-slate-900 font-bold"><td class="py-3">${h.cargoDetails}</td><td class="py-3 text-right text-emerald-700">${h.faturacao}</td></tr>`;
+            });
+        }
+
+        function fazerLogout() {
+            if(gpsInterval) clearInterval(gpsInterval);
+            localStorage.clear(); window.location.reload();
+        }
+    </script>
+</body>
+</html>
