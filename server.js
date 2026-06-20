@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -155,5 +156,5 @@ io.on('connection', (socket) => {
 });
 
 server.listen(process.env.PORT || 3000, () => {
-    console.log('🚀 LEVACARGA OPERACIONAL EM: http://localhost:3000');
+    console.log('🚀 LEVACARGA OPERACIONAL EM: https://levacarga.vercel.app');
 });
